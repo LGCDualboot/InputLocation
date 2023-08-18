@@ -12,26 +12,28 @@ import 'package:dio/dio.dart';
 import 'package:rxdart/rxdart.dart';
 
 class GooglePlaceAutoCompleteTextField extends StatefulWidget {
-  InputDecoration inputDecoration;
-  ItemClick? itmClick;
-  GetPlaceDetailswWithLatLng? getPlaceDetailWithLatLng;
-  bool isLatLngRequired = true;
+  final InputDecoration inputDecoration;
+  final ItemClick? itmClick;
+  final GetPlaceDetailswWithLatLng? getPlaceDetailWithLatLng;
+  final bool isLatLngRequired;
 
-  TextStyle textStyle;
-  String googleAPIKey;
-  int debounceTime = 600;
-  List<String>? countries = [];
-  TextEditingController textEditingController = TextEditingController();
+  final TextStyle textStyle;
+  final String googleAPIKey;
+  final int debounceTime;
+  final List<String> countries;
+  final List<String> types;
+  final TextEditingController textEditingController;
 
   GooglePlaceAutoCompleteTextField(
       {required this.textEditingController,
       required this.googleAPIKey,
-      this.debounceTime: 600,
-      this.inputDecoration: const InputDecoration(),
+      this.debounceTime = 600,
+      this.inputDecoration = const InputDecoration(),
       this.itmClick,
       this.isLatLngRequired=true,
       this.textStyle: const TextStyle(),
-      this.countries,
+      this.countries = const [],
+        this.types = const [],
       this.getPlaceDetailWithLatLng,
       });
 
@@ -68,20 +70,22 @@ class _GooglePlaceAutoCompleteTextFieldState
     String url =
         "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$text&key=${widget.googleAPIKey}";
 
-    if (widget.countries != null) {
-      // in
+    for (int i = 0; i < widget.countries.length; i++) {
+      String country = widget.countries[i];
 
-      for (int i = 0; i < widget.countries!.length; i++) {
-        String country = widget.countries![i];
-
-        if (i == 0) {
-          url = url + "&components=country:$country";
-        } else {
-          url = url + "|" + "country:" + country;
-        }
+      if (i == 0) {
+        url = url + "&components=country:$country";
+      } else {
+        url = url + "|" + "country:" + country;
       }
     }
 
+    if(widget.types.isNotEmpty){
+      url = url + "&types=";
+      for (var t in widget.types) {
+        url = url + "$t";
+      }
+    }
 
 
     Response response = await dio.get(url);
@@ -110,6 +114,7 @@ class _GooglePlaceAutoCompleteTextFieldState
 
   @override
   void initState() {
+    super.initState();
     subject.stream
         .distinct()
         .debounceTime(Duration(milliseconds: widget.debounceTime))
