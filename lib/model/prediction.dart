@@ -24,32 +24,6 @@ class PlacesAutocompleteResponse {
   }
 }
 
-class PlacesNearbyResponse {
-  List<NearbyPrediction>? predictions;
-  String? status;
-
-  PlacesNearbyResponse({this.predictions, this.status});
-
-  PlacesNearbyResponse.fromJson(Map<String, dynamic> json) {
-    if (json['results'] != null) {
-      predictions = [];
-      json['results'].forEach((v) {
-        predictions!.add(NearbyPrediction.fromJson(v));
-      });
-    }
-    status = json['status'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    if (this.predictions != null) {
-      data['predictions'] = this.predictions!.map((v) => v.toJson()).toList();
-    }
-    data['status'] = this.status;
-    return data;
-  }
-}
-
 class Prediction {
   String? description;
   String? id;
@@ -115,31 +89,6 @@ class Prediction {
     if (this.terms != null) {
       data['terms'] = this.terms!.map((v) => v.toJson()).toList();
     }
-    data['types'] = this.types;
-    data['lat'] = this.lat;
-    data['lng'] = this.lng;
-
-    return data;
-  }
-}
-
-class NearbyPrediction extends Prediction {
-  NearbyPrediction.fromJson(Map<String, dynamic> json) {
-    description = json['name'] + ', ' + json['vicinity'];
-    placeId = json['place_id'];
-    reference = json['reference'];
-    types = json['types'].cast<String>();
-    final location = json['geometry']['location'];
-    lat = location['lat'].toString();
-    lng = location['lng'].toString();
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['name'] = this.description;
-    data['id'] = this.id;
-    data['place_id'] = this.placeId;
-    data['reference'] = this.reference;
     data['types'] = this.types;
     data['lat'] = this.lat;
     data['lng'] = this.lng;

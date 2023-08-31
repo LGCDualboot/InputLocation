@@ -139,77 +139,6 @@ class _GooglePlaceAutoCompleteTextFieldState
     //   this._overlayEntry.markNeedsBuild();
   }
 
-  ///   URL Example:
-  ///     https://maps.googleapis.com/maps/api/place/nearbysearch/json?
-  ///     location=-34.9055016,-56.1851147&
-  ///     radius=500&
-  ///     types=restaurant&
-  ///     name=palermo&
-  ///     key=AIzaSyBWsQnQACwfvV55afY5UUUbSeiWOaLP14I
-  getNearbyLocation(String text) async {
-    Dio dio = new Dio();
-
-    String baseUrl =
-        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?';
-
-    final uri = Uri.parse(baseUrl);
-    final params = <String, String>{
-      'key': widget.googleAPIKey,
-      'name': text,
-      'radius': '500',
-    };
-
-    final components = <String>[];
-
-    for (int i = 0; i < widget.countries.length; i++) {
-      String country = widget.countries[i];
-
-      components.add('country:$country');
-    }
-
-    if (components.isNotEmpty) {
-      params['components'] = components.join('|');
-    }
-
-    if (widget.types.isNotEmpty) {
-      params['types'] = widget.types.join('|');
-    }
-
-    if (widget.location != null) {
-      params['location'] = widget.location.toString();
-    }
-
-    final url = uri
-        .replace(
-          path: uri.path,
-          queryParameters: params,
-        )
-        .toString();
-
-    Response response = await dio.get(url);
-    PlacesNearbyResponse subscriptionResponse =
-        PlacesNearbyResponse.fromJson(response.data);
-
-    if (text.length == 0) {
-      alPredictions.clear();
-      this._overlayEntry!.remove();
-      return;
-    }
-
-    isSearched = false;
-    if (subscriptionResponse.predictions!.length > 0) {
-      alPredictions.clear();
-      alPredictions.addAll(subscriptionResponse.predictions!);
-    }
-
-    //if (this._overlayEntry == null)
-
-    this._overlayEntry = null;
-    this._overlayEntry = this._createOverlayEntry();
-    Overlay.of(context).insert(this._overlayEntry!);
-    //   this._overlayEntry.markNeedsBuild();
-  }
-
   OverlayEntry? _createOverlayEntry() {
     if (context.findRenderObject() != null) {
       RenderBox renderBox = context.findRenderObject() as RenderBox;
@@ -259,7 +188,7 @@ class _GooglePlaceAutoCompleteTextFieldState
     this._overlayEntry = this._createOverlayEntry();
     Overlay.of(context).insert(this._overlayEntry!);
     this._overlayEntry!.markNeedsBuild();
-    }
+  }
 
   Future<Response?> getPlaceDetailsFromPlaceId(Prediction prediction) async {
     //String key = GlobalConfiguration().getString('google_maps_key');
@@ -276,10 +205,6 @@ class _GooglePlaceAutoCompleteTextFieldState
     prediction.lng = placeDetails.result!.geometry!.location!.lng.toString();
 
     widget.getPlaceDetailWithLatLng!(prediction);
-
-//    prediction.latLng = new LatLng(
-//        placeDetails.result.geometry.location.lat,
-//        placeDetails.result.geometry.location.lng);
   }
 }
 
