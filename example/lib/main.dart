@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/place_details.dart';
 import 'package:google_places_flutter/model/prediction.dart';
+import 'package:google_places_flutter/model/types.dart';
 
 void main() => runApp(MyApp());
 
@@ -66,6 +68,11 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  /*
+   argentina: -34.6036844, -58.3815591
+   uruguay: -34.9055016, -56.1851147
+   maldonado: -34.9027462, -54.9491154
+  */
   placesAutoCompleteTextField() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20),
@@ -73,18 +80,19 @@ class _MyHomePageState extends State<MyHomePage> {
           textEditingController: controller,
           googleAPIKey: "",
           inputDecoration: InputDecoration(hintText: "Search your location"),
-          debounceTime: 800,
-          countries: ["uy", "ar"],
-          types: ["restaurant"],
+          debounceTime: 300,
+          // countries: ["uy"],
+          // countries: ["ar"],
+          location: Location(lat: -34.9027462, lng: -54.9491154),
+          types: [Types.restaurant],
+          // types: ['locality'],
           isLatLngRequired: true,
-          getPlaceDetailWithLatLng: (Prediction prediction) {
-          },
+          getPlaceDetailWithLatLng: (Prediction prediction) {},
           itmClick: (Prediction prediction) {
             controller.text = prediction.description!;
 
             controller.selection = TextSelection.fromPosition(
                 TextPosition(offset: prediction.description!.length));
-
           }
           // default 600 ms ,
           ),

@@ -1,13 +1,9 @@
 library google_places_flutter;
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_places_flutter/model/place_details.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 
-import 'package:rxdart/subjects.dart';
 import 'package:dio/dio.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -22,20 +18,22 @@ class GooglePlaceAutoCompleteTextField extends StatefulWidget {
   final int debounceTime;
   final List<String> countries;
   final List<String> types;
+  final Location? location;
   final TextEditingController textEditingController;
 
-  GooglePlaceAutoCompleteTextField(
-      {required this.textEditingController,
-      required this.googleAPIKey,
-      this.debounceTime = 600,
-      this.inputDecoration = const InputDecoration(),
-      this.itmClick,
-      this.isLatLngRequired=true,
-      this.textStyle: const TextStyle(),
-      this.countries = const [],
-        this.types = const [],
-      this.getPlaceDetailWithLatLng,
-      });
+  GooglePlaceAutoCompleteTextField({
+    required this.textEditingController,
+    required this.googleAPIKey,
+    this.debounceTime = 600,
+    this.inputDecoration = const InputDecoration(),
+    this.itmClick,
+    this.isLatLngRequired = true,
+    this.textStyle = const TextStyle(),
+    this.countries = const [],
+    this.types = const [],
+    this.getPlaceDetailWithLatLng,
+    this.location,
+  });
 
   @override
   _GooglePlaceAutoCompleteTextFieldState createState() =>
@@ -53,6 +51,15 @@ class _GooglePlaceAutoCompleteTextFieldState
   bool isSearched = false;
 
   @override
+  void initState() {
+    super.initState();
+    subject.stream
+        .distinct()
+        .debounceTime(Duration(milliseconds: widget.debounceTime))
+        .listen(textChanged);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _layerLink,
@@ -65,28 +72,48 @@ class _GooglePlaceAutoCompleteTextFieldState
     );
   }
 
+  textChanged(String text) async {
+    getLocation(text);
+  }
+
   getLocation(String text) async {
     Dio dio = new Dio();
-    String url =
-        "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$text&key=${widget.googleAPIKey}";
+    String baseUrl =
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?';
+
+    final uri = Uri.parse(baseUrl);
+    final params = <String, String>{
+      'key': widget.googleAPIKey,
+      'input': text,
+      'radius': '50000',
+    };
+
+    final components = <String>[];
 
     for (int i = 0; i < widget.countries.length; i++) {
       String country = widget.countries[i];
 
-      if (i == 0) {
-        url = url + "&components=country:$country";
-      } else {
-        url = url + "|" + "country:" + country;
-      }
+      components.add('country:$country');
     }
 
-    if(widget.types.isNotEmpty){
-      url = url + "&types=";
-      for (var t in widget.types) {
-        url = url + "$t";
-      }
+    if (components.isNotEmpty) {
+      params['components'] = components.join('|');
     }
 
+    if (widget.types.isNotEmpty) {
+      params['types'] = widget.types.join('|');
+    }
+
+    if (widget.location != null) {
+      params['location'] = widget.location.toString();
+    }
+
+    final url = uri
+        .replace(
+          path: uri.path,
+          queryParameters: params,
+        )
+        .toString();
 
     Response response = await dio.get(url);
     PlacesAutocompleteResponse subscriptionResponse =
@@ -108,25 +135,83 @@ class _GooglePlaceAutoCompleteTextFieldState
 
     this._overlayEntry = null;
     this._overlayEntry = this._createOverlayEntry();
-    Overlay.of(context)!.insert(this._overlayEntry!);
+    Overlay.of(context).insert(this._overlayEntry!);
     //   this._overlayEntry.markNeedsBuild();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    subject.stream
-        .distinct()
-        .debounceTime(Duration(milliseconds: widget.debounceTime))
-        .listen(textChanged);
-  }
+  ///   URL Example:
+  ///     https://maps.googleapis.com/maps/api/place/nearbysearch/json?
+  ///     location=-34.9055016,-56.1851147&
+  ///     radius=500&
+  ///     types=restaurant&
+  ///     name=palermo&
+  ///     key=AIzaSyBWsQnQACwfvV55afY5UUUbSeiWOaLP14I
+  getNearbyLocation(String text) async {
+    Dio dio = new Dio();
 
-  textChanged(String text) async {
-    getLocation(text);
+    String baseUrl =
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?';
+
+    final uri = Uri.parse(baseUrl);
+    final params = <String, String>{
+      'key': widget.googleAPIKey,
+      'name': text,
+      'radius': '500',
+    };
+
+    final components = <String>[];
+
+    for (int i = 0; i < widget.countries.length; i++) {
+      String country = widget.countries[i];
+
+      components.add('country:$country');
+    }
+
+    if (components.isNotEmpty) {
+      params['components'] = components.join('|');
+    }
+
+    if (widget.types.isNotEmpty) {
+      params['types'] = widget.types.join('|');
+    }
+
+    if (widget.location != null) {
+      params['location'] = widget.location.toString();
+    }
+
+    final url = uri
+        .replace(
+          path: uri.path,
+          queryParameters: params,
+        )
+        .toString();
+
+    Response response = await dio.get(url);
+    PlacesNearbyResponse subscriptionResponse =
+        PlacesNearbyResponse.fromJson(response.data);
+
+    if (text.length == 0) {
+      alPredictions.clear();
+      this._overlayEntry!.remove();
+      return;
+    }
+
+    isSearched = false;
+    if (subscriptionResponse.predictions!.length > 0) {
+      alPredictions.clear();
+      alPredictions.addAll(subscriptionResponse.predictions!);
+    }
+
+    //if (this._overlayEntry == null)
+
+    this._overlayEntry = null;
+    this._overlayEntry = this._createOverlayEntry();
+    Overlay.of(context).insert(this._overlayEntry!);
+    //   this._overlayEntry.markNeedsBuild();
   }
 
   OverlayEntry? _createOverlayEntry() {
-    if (context != null && context.findRenderObject() != null) {
+    if (context.findRenderObject() != null) {
       RenderBox renderBox = context.findRenderObject() as RenderBox;
       var size = renderBox.size;
       var offset = renderBox.localToGlobal(Offset.zero);
@@ -172,11 +257,9 @@ class _GooglePlaceAutoCompleteTextFieldState
   removeOverlay() {
     alPredictions.clear();
     this._overlayEntry = this._createOverlayEntry();
-    if (context != null) {
-      Overlay.of(context)!.insert(this._overlayEntry!);
-      this._overlayEntry!.markNeedsBuild();
+    Overlay.of(context).insert(this._overlayEntry!);
+    this._overlayEntry!.markNeedsBuild();
     }
-  }
 
   Future<Response?> getPlaceDetailsFromPlaceId(Prediction prediction) async {
     //String key = GlobalConfiguration().getString('google_maps_key');
@@ -201,7 +284,8 @@ class _GooglePlaceAutoCompleteTextFieldState
 }
 
 PlacesAutocompleteResponse parseResponse(Map responseBody) {
-  return PlacesAutocompleteResponse.fromJson(responseBody as Map<String, dynamic>);
+  return PlacesAutocompleteResponse.fromJson(
+      responseBody as Map<String, dynamic>);
 }
 
 PlaceDetails parsePlaceDetailMap(Map responseBody) {
